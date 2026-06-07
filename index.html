@@ -1,0 +1,2024 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flashcards HQC — Établir des liens de causalité</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Source+Serif+4:ital,wght@0,300;0,400;0,600;1,300&display=swap');
+
+  :root {
+    --bleu: #1a5fa8;
+    --rouge: #c0392b;
+    --vert: #1a7a3f;
+    --noir: #1c1c1c;
+    --fond: #f5f0e8;
+    --fond-carte: #fdfaf4;
+    --bordure: #c8b89a;
+    --accent: #8b6914;
+    --gris-pale: #ece8df;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Source Serif 4', Georgia, serif;
+    background: #e8e2d5;
+    color: var(--noir);
+    min-height: 100vh;
+    padding: 30px 20px;
+  }
+
+  /* ── EN-TÊTE ── */
+  header {
+    text-align: center;
+    margin-bottom: 36px;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 2rem;
+    color: var(--accent);
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+  }
+  header h2 {
+    font-size: 1rem;
+    font-weight: 300;
+    color: #6b5d44;
+    margin-top: 6px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .badge-total {
+    display: inline-block;
+    margin-top: 12px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 20px;
+    letter-spacing: 0.05em;
+  }
+
+  /* ── FILTRES CHAPITRE ── */
+  .filtres {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 32px;
+  }
+  .filtre-btn {
+    background: var(--fond-carte);
+    border: 1.5px solid var(--bordure);
+    color: var(--accent);
+    font-family: 'Source Serif 4', serif;
+    font-size: 0.82rem;
+    font-weight: 600;
+    padding: 6px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: 0.03em;
+  }
+  .filtre-btn:hover, .filtre-btn.actif {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+
+  /* ── GRILLE DE CARTES ── */
+  .grille {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(680px, 1fr));
+    gap: 28px;
+    max-width: 1500px;
+    margin: 0 auto;
+  }
+
+  /* ── CARTE FLASHCARD ── */
+  .carte-wrapper {
+    perspective: 1400px;
+  }
+  .carte {
+    width: 100%;
+    aspect-ratio: 16 / 7;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.65s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+  }
+  .carte.retournee {
+    transform: rotateY(180deg);
+  }
+
+  .face {
+    position: absolute;
+    inset: 0;
+    backface-visibility: hidden;
+    border-radius: 10px;
+    background: var(--fond-carte);
+    border: 1.5px solid var(--bordure);
+    box-shadow: 0 4px 18px rgba(0,0,0,0.12), 0 1px 4px rgba(0,0,0,0.08);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .face.verso {
+    transform: rotateY(180deg);
+  }
+
+  /* ── BANDEAU SUPÉRIEUR ── */
+  .bandeau {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 18px;
+    border-bottom: 1px solid var(--bordure);
+    background: var(--gris-pale);
+  }
+  .bandeau .numero {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent);
+    min-width: 28px;
+  }
+  .bandeau .titre-theme {
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: #7a6a50;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+  }
+  .bandeau .chapitre-tag {
+    margin-left: auto;
+    font-size: 0.68rem;
+    color: #9a8a70;
+    font-style: italic;
+  }
+  .bandeau .face-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-left: auto;
+  }
+  .recto-label { background: #e3edfa; color: var(--bleu); }
+  .verso-label { background: #e6f4eb; color: var(--vert); }
+
+  /* ── CORPS RECTO ── */
+  .corps-recto {
+    flex: 1;
+    display: flex;
+    gap: 0;
+    overflow: hidden;
+  }
+  .question-col {
+    flex: 1;
+    padding: 14px 18px;
+    border-right: 1px solid var(--bordure);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  .question-texte {
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.45;
+    color: var(--noir);
+    margin-bottom: 6px;
+  }
+  .question-consigne {
+    font-size: 0.75rem;
+    font-style: italic;
+    color: #7a6a50;
+    line-height: 1.4;
+  }
+  .elements-col {
+    width: 280px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(255,255,255,0.5);
+  }
+  .elements-titre {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #7a6a50;
+    margin-bottom: 2px;
+  }
+  .element {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.8rem;
+    line-height: 1.35;
+  }
+  .element-puce {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-top: 3px;
+    flex-shrink: 0;
+  }
+  .e1 .element-puce { background: var(--bleu); }
+  .e2 .element-puce { background: var(--rouge); }
+  .e3 .element-puce { background: var(--vert); }
+  .e1 .element-texte { color: var(--bleu); font-weight: 600; }
+  .e2 .element-texte { color: var(--rouge); font-weight: 600; }
+  .e3 .element-texte { color: var(--vert); font-weight: 600; }
+
+  /* ── CORPS VERSO ── */
+  .corps-verso {
+    flex: 1;
+    padding: 14px 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow-y: auto;
+  }
+  .reponse-texte {
+    font-size: 0.86rem;
+    line-height: 1.65;
+    color: var(--noir);
+  }
+  .reponse-texte .b { color: var(--bleu); font-weight: 600; }
+  .reponse-texte .r { color: var(--rouge); font-weight: 600; }
+  .reponse-texte .v { color: var(--vert); font-weight: 600; }
+  .reponse-texte .connecteur { color: var(--noir); font-weight: 700; font-style: italic; }
+
+  /* ── PIED DE CARTE ── */
+  .pied {
+    padding: 6px 18px;
+    border-top: 1px solid var(--bordure);
+    background: var(--gris-pale);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .pied-hint {
+    font-size: 0.68rem;
+    color: #9a8a70;
+    font-style: italic;
+  }
+  .pied-icone {
+    font-size: 0.72rem;
+    color: #9a8a70;
+  }
+
+  /* ── SÉPARATEUR CHAPITRE ── */
+  .separateur-chapitre {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin: 8px 0 2px;
+  }
+  .separateur-chapitre .chap-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--accent);
+    white-space: nowrap;
+  }
+  .separateur-chapitre .chap-ligne {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(to right, var(--bordure), transparent);
+  }
+
+  /* ── COMPTEUR ── */
+  .compteur {
+    text-align: center;
+    margin-bottom: 16px;
+    font-size: 0.8rem;
+    color: #7a6a50;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 760px) {
+    .grille { grid-template-columns: 1fr; }
+    .carte { aspect-ratio: auto; min-height: 320px; }
+    .corps-recto { flex-direction: column; }
+    .elements-col { width: 100%; border-right: none; border-top: 1px solid var(--bordure); }
+    .question-col { border-right: none; }
+  }
+
+  /* ── HIDDEN ── */
+  .carte-wrapper.masquee { display: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Banque de questions — Établir des liens de causalité</h1>
+  <h2>Histoire du Québec et du Canada &nbsp;·&nbsp; Secondaire 4</h2>
+  <span class="badge-total">53 flashcards</span>
+</header>
+
+<div class="filtres">
+  <button class="filtre-btn actif" onclick="filtrer('tout', this)">Toutes (53)</button>
+  <button class="filtre-btn" onclick="filtrer('ch1', this)">Chapitre 1 — Formation de la fédération (1–13)</button>
+  <button class="filtre-btn" onclick="filtrer('ch2', this)">Chapitre 2 — Nationalismes et autonomie (14–25)</button>
+  <button class="filtre-btn" onclick="filtrer('ch3', this)">Chapitre 3 — Révolution tranquille (26–40)</button>
+  <button class="filtre-btn" onclick="filtrer('ch4', this)">Chapitre 4 — Québec contemporain (41–53)</button>
+</div>
+
+<p class="compteur">Cliquez sur une carte pour la retourner · <span id="nb-visible">53</span> carte(s) affichée(s)</p>
+
+<div class="grille" id="grille">
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- CHAPITRE 1 -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="separateur-chapitre"><span class="chap-label">Chapitre 1 — Formation de la fédération canadienne</span><span class="chap-ligne"></span></div>
+
+<!-- CARTE 1 -->
+<div class="carte-wrapper" data-chap="ch1">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">1</span><span class="titre-theme">Acte d'Union</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment les rébellions de 1837-1838 entraînent une transformation politique dans la Province du Canada.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Les rébellions dans les colonies britanniques</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une décision prise par Londres</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence pour les Canadiens français</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">1</span><span class="titre-theme">Acte d'Union</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="connecteur">À la suite</span> <span class="b">des rébellions de 1837-1838 dans les colonies britanniques</span> <span class="b">poussent le gouvernement britannique à intervenir afin de reprendre le contrôle de ses colonies.</span> <span class="connecteur">C'est pourquoi</span> <span class="r">Londres adopte alors l'Acte d'Union en 1840, qui unit le Haut-Canada et le Bas-Canada dans une seule colonie&nbsp;: la Province du Canada.</span> Cette union législative <span class="connecteur">a pour conséquence</span> <span class="v">de diminuer l'influence politique des Canadiens français, puisque les deux anciennes colonies obtiennent le même nombre de députés malgré la population plus nombreuse du Bas-Canada.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 2 -->
+<div class="carte-wrapper" data-chap="ch1">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">2</span><span class="titre-theme">Gouvernement responsable</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment l'alliance des réformistes mène à l'obtention du gouvernement responsable.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une revendication des réformistes</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une décision du gouvernement britannique</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur le pouvoir politique dans la colonie</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">2</span><span class="titre-theme">Gouvernement responsable</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="connecteur">D'abord,</span> <span class="b">les députés réformistes de la Province du Canada, dirigés notamment par Baldwin et La Fontaine, s'allient pour réclamer l'adoption d'un gouvernement responsable afin que les élus contrôlent réellement les décisions politiques.</span> <span class="connecteur">C'est pourquoi</span> <span class="r">devant les tensions politiques dans la colonie, le gouvernement britannique accepte finalement la responsabilité ministérielle en 1848.</span> <span class="connecteur">Cela a pour effet</span> <span class="v">de permettre aux ministres d'être responsables devant l'Assemblée élue plutôt que devant le gouverneur, ce qui augmente le pouvoir politique des représentants élus.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 3 -->
+<div class="carte-wrapper" data-chap="ch1">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">3</span><span class="titre-theme">Libre-échange</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment l'abolition des tarifs préférentiels transforme l'économie canadienne.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une décision économique de Londres</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une transformation des échanges commerciaux</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur le développement économique de la colonie</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">3</span><span class="titre-theme">Libre-échange</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="connecteur">D'abord,</span> <span class="b">Londres met fin aux tarifs préférentiels qui protégeaient l'économie coloniale et adopte une politique de libre-échange.</span> <span class="connecteur">Cela a pour effet</span> <span class="r">de pousser la colonie à développer davantage leurs échanges commerciaux avec les États-Unis.</span> <span class="connecteur">C'est ainsi que</span> <span class="v">le traité de réciprocité permet l'abolition des tarifs douaniers sur plusieurs matières premières échangées entre le Canada-Uni et les États-Unis, augmentant les échanges commerciaux entre ces pays.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 4 -->
+<div class="carte-wrapper" data-chap="ch1">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">4</span><span class="titre-theme">Instabilité politique</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment l'instabilité politique mène à la création du Dominion du Canada.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une difficulté politique dans la Province du Canada</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une solution proposée par les colonies britanniques</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence constitutionnelle</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">4</span><span class="titre-theme">Instabilité politique</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="connecteur">D'abord,</span> <span class="b">dans la Province du Canada, plusieurs gouvernements se succèdent sans réussir à obtenir une double majorité stable au parlement.</span> Cette instabilité politique <span class="connecteur">pousse alors</span> <span class="r">les colonies britanniques à chercher une solution commune&nbsp;; les députés forment la Grande Coalition et proposent l'union fédérale des colonies britanniques.</span> Cette solution <span class="connecteur">mène à</span> <span class="v">l'Acte de l'Amérique du Nord britannique de 1867, qui crée officiellement le Dominion du Canada.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 5 -->
+<div class="carte-wrapper" data-chap="ch1">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">5</span><span class="titre-theme">AANB</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment l'AANB transforme l'organisation politique du Canada.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une caractéristique du fédéralisme canadien</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Un pouvoir du gouvernement fédéral</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence pour les provinces</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">5</span><span class="titre-theme">AANB</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">L'Acte de l'Amérique du Nord britannique crée officiellement le Dominion du Canada en 1867. Cette constitution prévoit le partage des compétences entre le gouvernement fédéral et les provinces.</span> <span class="connecteur">C'est ainsi que</span> <span class="r">le gouvernement fédéral centralise les pouvoirs et obtient notamment le contrôle de domaines importants comme la défense et le commerce.</span> Cette organisation <span class="connecteur">a pour effet</span> <span class="v">de permettre aux provinces de conserver certains pouvoirs, par exemple en éducation et en santé.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 6 -->
+<div class="carte-wrapper" data-chap="ch1">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">6</span><span class="titre-theme">Expansion territoriale</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment l'expansion du Dominion transforme le territoire canadien.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une volonté du gouvernement fédéral</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une expansion du territoire canadien</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur le peuplement de l'Ouest</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">6</span><span class="titre-theme">Expansion territoriale</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="connecteur">D'abord,</span> <span class="b">le gouvernement fédéral souhaite agrandir le Dominion du Canada afin d'occuper l'Ouest et de développer le pays.</span> <span class="connecteur">C'est pourquoi</span> <span class="r">il achète les territoires de la Compagnie de la Baie d'Hudson et intègre de nouveaux territoires au Canada comme la Colombie-Britannique et l'Île-du-Prince-Édouard.</span> Cette expansion <span class="connecteur">a pour effet</span> <span class="v">de favoriser le peuplement de l'Ouest canadien grâce à l'arrivée de colons et d'immigrants.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 7 -->
+<div class="carte-wrapper" data-chap="ch1">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">7</span><span class="titre-theme">Métis</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment l'expansion du Canada dans l'Ouest provoque un soulèvement métis.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une action du gouvernement fédéral</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une réaction des Métis</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence politique</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">7</span><span class="titre-theme">Métis</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="connecteur">D'abord,</span> <span class="b">le gouvernement fédéral entreprend de coloniser l'Ouest canadien en procédant à l'arpentage des terres sans consulter les Métis.</span> <span class="connecteur">En réaction,</span> <span class="r">les Métis dirigés par Louis Riel organisent un soulèvement afin de défendre leurs terres et leurs droits à la rivière Rouge. Ils forment alors un gouvernement provisoire dirigé par Louis Riel.</span> Cette crise <span class="connecteur">mène finalement</span> <span class="v">à la création du Manitoba par le gouvernement fédéral en 1870.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 8 -->
+<div class="carte-wrapper" data-chap="ch1">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">8</span><span class="titre-theme">Politique nationale</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment la Politique nationale favorise le développement industriel du Canada.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une mesure de la Politique nationale</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une transformation économique</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur la population canadienne</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">8</span><span class="titre-theme">Politique nationale</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="connecteur">D'abord,</span> <span class="b">le Canada traverse une importante crise économique à la fin du 19e siècle. Le gouvernement de John A. Macdonald adopte alors la Politique nationale afin de protéger les industries canadiennes grâce à des tarifs douaniers élevés.</span> Cette mesure <span class="connecteur">entraîne</span> <span class="r">le développement des industries au Canada, puisque les produits étrangers deviennent plus coûteux.</span> Cette industrialisation <span class="connecteur">a pour effet</span> <span class="v">d'attirer de nombreux travailleurs dans les villes et stimule la croissance de la population canadienne.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 9 -->
+<div class="carte-wrapper" data-chap="ch1">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">9</span><span class="titre-theme">Réseau ferroviaire</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment le développement du réseau ferroviaire transforme le Canada.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une décision du gouvernement fédéral</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une transformation du territoire</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence économique</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">9</span><span class="titre-theme">Réseau ferroviaire</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le gouvernement fédéral décide de développer le réseau ferroviaire afin de relier les différentes régions du Dominion et favoriser les échanges commerciaux.</span> <span class="connecteur">Ainsi,</span> <span class="r">l'extension du chemin de fer facilite le transport des marchandises et des populations à travers le territoire.</span> Cette infrastructure <span class="connecteur">favorise ensuite</span> <span class="v">le développement économique et le peuplement de l'Ouest canadien.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 10 -->
+<div class="carte-wrapper" data-chap="ch1">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">10</span><span class="titre-theme">Industrialisation</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment la première phase d'industrialisation transforme le travail au Québec.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une innovation industrielle</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une transformation du travail</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une réaction des ouvriers</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">10</span><span class="titre-theme">Industrialisation</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">La première phase industrielle favorise la mécanisation du travail grâce à l'utilisation du charbon et de la machine à vapeur. Cela accélère la production industrielle au Québec et nécessite de la main-d'œuvre.</span> <span class="connecteur">Cela entraîne</span> <span class="r">la division du travail. De nombreux ouvriers quittent les campagnes pour travailler dans les manufactures avec de mauvaises conditions de travail.</span> <span class="connecteur">C'est pourquoi</span> <span class="v">les ouvriers forment des syndicats et organisent des grèves.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 11 -->
+<div class="carte-wrapper" data-chap="ch1">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">11</span><span class="titre-theme">Urbanisation</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment les migrations transforment les villes canadiennes au 19e siècle.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une cause des migrations</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Un déplacement de population</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur les villes canadiennes</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">11</span><span class="titre-theme">Urbanisation</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">La mécanisation de l'agriculture entraîne la perte d'emploi de nombreux ouvriers agricoles dans les campagnes.</span> Cela <span class="connecteur">pousse</span> <span class="r">de nombreuses personnes à quitter les campagnes pour s'installer dans les villes canadiennes, c'est l'exode rural.</span> Ce déplacement de population <span class="connecteur">provoque</span> <span class="v">une forte croissance urbaine, particulièrement à Montréal et à Québec. Cette urbanisation entraîne le développement des quartiers ouvriers ainsi qu'une augmentation des besoins en logements et en infrastructures.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 12 -->
+<div class="carte-wrapper" data-chap="ch1">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">12</span><span class="titre-theme">Colonisation</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment le gouvernement québécois tente de freiner l'émigration vers les États-Unis.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une difficulté vécue par les Canadiens français</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une proposition du clergé catholique</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une action du gouvernement québécois</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">12</span><span class="titre-theme">Colonisation</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le manque de terres agricoles fertiles dans la vallée du Saint-Laurent pousse de nombreux Canadiens français à quitter le Québec pour aller travailler aux États-Unis.</span> <span class="connecteur">C'est ainsi que</span> <span class="r">pour freiner cette émigration et protéger l'identité des Canadiens français, le clergé catholique propose l'ouverture de nouvelles régions de colonisation.</span> Le gouvernement québécois soutient <span class="connecteur">alors</span> <span class="v">l'ouverture de territoires à la colonisation des régions comme le Saguenay–Lac-Saint-Jean, afin de retenir la population canadienne-française au Québec.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 13 -->
+<div class="carte-wrapper" data-chap="ch1">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">13</span><span class="titre-theme">Ultramontanisme</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment l'ultramontanisme influence la société québécoise au 19e siècle.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une valeur défendue par les ultramontains</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une influence de l'Église catholique</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur la société québécoise</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">13</span><span class="titre-theme">Ultramontanisme</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Les ultramontains considèrent que l'Église catholique doit guider la société québécoise et défendre les valeurs traditionnelles.</span> <span class="connecteur">C'est ainsi que</span> <span class="r">l'Église exerce une grande influence sur l'éducation, la santé et la politique au Québec.</span> Cette domination <span class="connecteur">renforce</span> <span class="v">le pouvoir de l'Église catholique dans la société québécoise au 19e siècle.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- CHAPITRE 2 -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="separateur-chapitre"><span class="chap-label">Chapitre 2 — Nationalismes et autonomie du Canada</span><span class="chap-ligne"></span></div>
+
+<!-- CARTE 14 -->
+<div class="carte-wrapper" data-chap="ch2">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">14</span><span class="titre-theme">Nationalismes</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment le statut du Canada dans l'Empire britannique provoque des tensions au pays.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une position des impérialistes</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une revendication des nationalistes canadiens-français</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence politique</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">14</span><span class="titre-theme">Nationalismes</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Les impérialistes souhaitent soutenir le Royaume-Uni et renforcer les liens avec l'Empire britannique.</span> Les nationalistes canadiens-français réclament <span class="connecteur">plutôt</span> <span class="r">une plus grande autonomie du Canada et refusent de participer automatiquement aux guerres britanniques.</span> Cette opposition <span class="connecteur">provoque</span> <span class="v">des tensions politiques importantes entre les deux groupes au Canada.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 15 -->
+<div class="carte-wrapper" data-chap="ch2">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">15</span><span class="titre-theme">Guerre des Boers</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment Laurier tente de concilier les tensions liées à la Guerre des Boers.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une demande de l'Empire britannique</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une décision du gouvernement Laurier</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une réaction de la population québécoise</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">15</span><span class="titre-theme">Guerre des Boers</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le Royaume-Uni demande l'aide militaire du Canada durant la Guerre des Boers en Afrique du Sud.</span> Wilfrid Laurier décide <span class="connecteur">alors</span> <span class="r">d'envoyer des volontaires plutôt qu'une armée obligatoire afin de satisfaire les impérialistes tout en limitant l'opposition des nationalistes canadiens-français.</span> <span class="connecteur">Cette décision permet de réduire les tensions entre impérialistes et nationalistes canadiens-français, même si les débats demeurent importants.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 16 -->
+<div class="carte-wrapper" data-chap="ch2">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">16</span><span class="titre-theme">Deuxième phase industrielle</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment la deuxième phase industrielle transforme l'économie québécoise.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une source d'énergie utilisée</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une transformation industrielle</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence économique</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">16</span><span class="titre-theme">Deuxième phase industrielle</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">L'hydroélectricité devient une importante source d'énergie durant la deuxième phase industrielle, avec la construction de barrages.</span> <span class="connecteur">Cela entraîne</span> <span class="r">le développement des industries des pâtes et papiers, de l'aluminium et des mines au Québec.</span> <span class="connecteur">Cela a pour effet</span> <span class="v">la croissance économique et le développement de plusieurs régions québécoises riches en ressources naturelles, comme l'Abitibi ou l'Outaouais.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 17 -->
+<div class="carte-wrapper" data-chap="ch2">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">17</span><span class="titre-theme">Immigration</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment les politiques d'immigration transforment l'Ouest canadien au début du 20e siècle.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une politique du gouvernement canadien</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une arrivée massive d'immigrants</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence territoriale</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">17</span><span class="titre-theme">Immigration</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Au début du 20e siècle, le gouvernement canadien encourage fortement l'immigration afin de peupler l'Ouest canadien.</span> <span class="connecteur">Cela a pour effet</span> <span class="r">l'arrivée de milliers d'immigrants européens qui s'installent dans l'Ouest canadien pour exploiter les terres agricoles. La population augmente rapidement.</span> Cette croissance <span class="connecteur">mène finalement</span> <span class="v">à la création des provinces de l'Alberta et de la Saskatchewan.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 18 -->
+<div class="carte-wrapper" data-chap="ch2">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">18</span><span class="titre-theme">Discrimination asiatique</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment certaines politiques d'immigration entraînent de la discrimination au Canada.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une politique d'immigration canadienne</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Un groupe touché par les restrictions</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sociale</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">18</span><span class="titre-theme">Discrimination asiatique</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le gouvernement canadien adopte des politiques discriminatoires afin de limiter l'immigration asiatique au Canada.</span> <span class="connecteur">Ainsi,</span> <span class="r">les immigrants chinois et japonais doivent notamment payer des taxes spéciales ou respecter des quotas d'immigration.</span> Ces mesures <span class="connecteur">provoquent</span> <span class="v">des inégalités et de la discrimination envers les communautés asiatiques au Canada.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 19 -->
+<div class="carte-wrapper" data-chap="ch2">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">19</span><span class="titre-theme">Pensionnats autochtones</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment les politiques d'assimilation affectent les peuples autochtones au début du 20e siècle.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une politique du gouvernement canadien</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une mesure imposée aux Autochtones</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur les communautés autochtones</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">19</span><span class="titre-theme">Pensionnats autochtones</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le gouvernement canadien met en place une politique d'assimilation des peuples autochtones.</span> <span class="connecteur">C'est pourquoi</span> <span class="r">les enfants autochtones sont obligés de fréquenter les pensionnats afin d'y recevoir une éducation européenne et chrétienne. Ils sont séparés de leur famille et privés de leur langue et de leurs traditions.</span> Cette politique <span class="connecteur">entraîne</span> <span class="v">la perte de plusieurs langues, traditions culturelles et de nombreux traumatismes dans les communautés autochtones.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 20 -->
+<div class="carte-wrapper" data-chap="ch2">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">20</span><span class="titre-theme">Première Guerre mondiale</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment la Première Guerre mondiale provoque une crise politique au Canada.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">La participation du Canada à la guerre</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une mesure imposée par le gouvernement fédéral</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une réaction de la population québécoise</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">20</span><span class="titre-theme">Première Guerre mondiale</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le Canada participe à la Première Guerre mondiale en raison de ses liens avec l'Empire britannique.</span> <span class="connecteur">Comme</span> les pertes humaines augmentent pendant le conflit, <span class="r">le gouvernement fédéral adopte la conscription afin d'obliger les hommes à s'enrôler dans l'armée.</span> Cette mesure <span class="connecteur">provoque alors</span> <span class="v">une forte opposition au Québec, où plusieurs Canadiens français refusent le service militaire obligatoire.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 21 -->
+<div class="carte-wrapper" data-chap="ch2">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">21</span><span class="titre-theme">Effort de guerre</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment la Première Guerre mondiale transforme le rôle des femmes dans la société canadienne.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une conséquence de la guerre</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une participation des femmes à l'effort de guerre</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une transformation sociale</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">21</span><span class="titre-theme">Effort de guerre</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Pendant la Première Guerre mondiale, de nombreux hommes quittent leur emploi pour aller combattre en Europe.</span> <span class="connecteur">C'est pourquoi</span> <span class="r">les femmes remplacent les hommes dans plusieurs usines et participent activement à l'effort de guerre canadien. Elles fabriquent notamment des munitions (munitionnettes).</span> Cette nouvelle réalité <span class="connecteur">transforme progressivement</span> <span class="v">la place des femmes dans la société et favorise leurs revendications politiques et sociales. Ces avancées permettent notamment aux femmes d'obtenir le droit de vote au niveau fédéral.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 22 -->
+<div class="carte-wrapper" data-chap="ch2">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">22</span><span class="titre-theme">Luttes des femmes</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment les revendications féministes entraînent des changements politiques au Canada.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une revendication des féministes</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une opposition rencontrée</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une décision du gouvernement canadien</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">22</span><span class="titre-theme">Luttes des femmes</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Les féministes revendiquent davantage de droits politiques, notamment le droit de vote.</span> <span class="connecteur">Malgré</span> <span class="r">l'opposition du clergé catholique et de certains groupes conservateurs,</span> le gouvernement canadien accorde <span class="connecteur">finalement</span> <span class="v">le droit de vote aux femmes aux élections fédérales en 1918. Cette décision représente une importante avancée pour les droits des femmes au Canada.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 23 -->
+<div class="carte-wrapper" data-chap="ch2">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">23</span><span class="titre-theme">Années folles</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment les années folles favorisent le développement de la culture de masse.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une amélioration économique</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une transformation des loisirs</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence culturelle</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">23</span><span class="titre-theme">Années folles</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">La prospérité économique des années 1920 augmente le pouvoir d'achat de la population canadienne.</span> <span class="connecteur">C'est pourquoi</span> <span class="r">les gens ont davantage accès aux loisirs, au cinéma et à la radio.</span> Cette situation <span class="connecteur">a pour effet</span> <span class="v">le développement d'une culture de masse influencée par les nouveaux médias et la culture américaine.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 24 -->
+<div class="carte-wrapper" data-chap="ch2">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">24</span><span class="titre-theme">Grande Dépression</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment le krach boursier transforme la société canadienne dans les années 1930.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une conséquence économique du krach boursier</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Des difficultés vécues par la population</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une intervention du gouvernement</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">24</span><span class="titre-theme">Grande Dépression</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le krach boursier de 1929 provoque la fermeture de nombreuses entreprises canadiennes. En effet, de 1929 à 1933, les exportations canadiennes diminuent de 50%.</span> <span class="connecteur">Cela entraîne</span> <span class="r">la perte d'emploi de milliers de travailleurs qui vivent dans la pauvreté.</span> Pour aider la population, le gouvernement met <span class="connecteur">alors</span> <span class="v">en place diverses mesures comme des secours directs et intervient davantage dans l'économie canadienne avec un programme de travaux publics pour donner des emplois aux chômeurs.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 25 -->
+<div class="carte-wrapper" data-chap="ch2">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">25</span><span class="titre-theme">Deuxième Guerre mondiale</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment la Deuxième Guerre mondiale transforme l'économie canadienne.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une mesure prise par le gouvernement</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une mobilisation économique</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur la population canadienne</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">25</span><span class="titre-theme">Deuxième Guerre mondiale</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">En 1939, après la déclaration de guerre à l'Allemagne, le gouvernement fédéral applique la Loi sur les mesures de guerre pour soutenir l'effort de guerre, notamment le rationnement et la production militaire.</span> Cette mobilisation <span class="connecteur">entraîne</span> <span class="r">une forte croissance des industries canadiennes et augmente la production dans les usines.</span> <span class="connecteur">L'économie canadienne se développe rapidement et des</span> <span class="v">emplois sont créés pendant la guerre.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- CHAPITRE 3 -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="separateur-chapitre"><span class="chap-label">Chapitre 3 — Révolution tranquille</span><span class="chap-ligne"></span></div>
+
+<!-- CARTE 26 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">26</span><span class="titre-theme">Guerre froide</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment la Guerre froide influence les sociétés occidentales après 1945.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une rivalité internationale</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une alliance militaire occidentale</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence politique</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">26</span><span class="titre-theme">Guerre froide</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Après la Deuxième Guerre mondiale, les États-Unis et l'URSS s'opposent dans un affrontement idéologique entre le capitalisme et le communisme.</span> Les pays occidentaux créent <span class="connecteur">alors</span> <span class="r">des alliances militaires comme l'OTAN afin de se protéger contre l'expansion du communisme.</span> Cette alliance militaire <span class="connecteur">renforce</span> <span class="v">les tensions politiques entre les deux blocs durant la Guerre froide.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 27 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">27</span><span class="titre-theme">Politique économique de libre-échange</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment la course aux armements liée à la guerre froide favorise la croissance économique du Canada.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">La course aux armements et l'industrie militaire américaine</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Les besoins en matières premières</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur l'économie canadienne</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">27</span><span class="titre-theme">Politique économique de libre-échange</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">La course aux armements engendrée par la guerre froide favorise la croissance de l'industrie militaire américaine.</span> <span class="connecteur">Cela entraîne</span> <span class="r">des besoins en matières premières qu'il faut combler pour cette industrie. Les États-Unis se tournent alors vers le Canada.</span> <span class="connecteur">Par conséquent,</span> <span class="v">l'exploitation des richesses naturelles canadiennes, comme les minerais, connaît une expansion. Les investissements américains au Canada augmentent.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 28 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">28</span><span class="titre-theme">Voie maritime du Saint-Laurent</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment la croissance des échanges commerciaux mène à l'inauguration de la voie maritime du Saint-Laurent.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Les échanges commerciaux entre le Canada et les États-Unis</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Un accord entre les deux gouvernements</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur le transport et l'économie</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">28</span><span class="titre-theme">Voie maritime du Saint-Laurent</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">La croissance des échanges commerciaux entre le Canada et les États-Unis nécessite une amélioration des infrastructures de transport.</span> <span class="connecteur">C'est pourquoi</span> <span class="r">en 1954, les gouvernements américain et canadien signent un accord afin de financer les travaux de construction de la voie maritime du Saint-Laurent.</span> <span class="connecteur">Cette voie d'eau permet</span> <span class="v">aux transatlantiques d'atteindre les grands Lacs, là où se trouvent des ports stratégiques liés au marché américain.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 29 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">29</span><span class="titre-theme">Agglomération urbaine</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment la croissance de la population transforme les villes du Québec après 1945.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une croissance démographique</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une intervention de l'État</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une transformation du territoire</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">29</span><span class="titre-theme">Agglomération urbaine</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le bébé-boom entraîne une importante croissance de la population après 1945.</span> Pour répondre aux nouveaux besoins, <span class="connecteur">l'État investit</span> <span class="r">dans les routes, les autoroutes et les infrastructures de transport.</span> Cette situation <span class="connecteur">favorise</span> <span class="v">l'étalement urbain et le développement des banlieues (maisons unifamiliales) autour des grandes villes québécoises.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 30 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">30</span><span class="titre-theme">Société de consommation</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment l'augmentation du pouvoir d'achat transforme les habitudes de vie des Québécois après 1945.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une amélioration économique</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une transformation de la consommation</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence culturelle</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">30</span><span class="titre-theme">Société de consommation</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">L'augmentation du pouvoir d'achat permet aux Québécois d'acheter davantage de biens de consommation comme les automobiles et les électroménagers.</span> <span class="connecteur">Cela entraîne</span> <span class="r">une transformation rapide des habitudes de consommation grâce à la publicité et au crédit plus accessible (société de consommation ou consommation de masse).</span> <span class="connecteur">Cela a pour effet</span> <span class="v">de favoriser l'influence de la culture américaine dans la société québécoise.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 31 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">31</span><span class="titre-theme">Duplessis — développement économique</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment le gouvernement Duplessis favorise le développement économique du Québec.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une politique économique du gouvernement Duplessis</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une participation des entreprises étrangères</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence économique</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">31</span><span class="titre-theme">Duplessis — développement économique</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le gouvernement Duplessis s'aligne sur le libéralisme économique. Il encourage les entreprises américaines à investir dans l'exploitation des ressources naturelles du Québec.</span> <span class="connecteur">C'est ainsi que</span> <span class="r">ces investissements américains stimulent la production minière, particulièrement dans les régions de la Côte-Nord et au Nouveau-Québec, riches en gisements, principalement de fer.</span> <span class="connecteur">Les capitaux américains investis au Québec permettent</span> <span class="v">à la province d'augmenter ses revenus.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 32 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">32</span><span class="titre-theme">Duplessis — résistance au fédéral</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment certaines politiques économiques du gouvernement fédéral suscitent de la résistance de la part du gouvernement Duplessis.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">L'intervention du gouvernement fédéral dans l'économie canadienne</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Un élément de la Constitution canadienne</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une manifestation de la résistance du gouvernement Duplessis</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">32</span><span class="titre-theme">Duplessis — résistance au fédéral</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Dans les années qui suivent la Seconde Guerre mondiale, le gouvernement fédéral intervient de plus en plus dans l'économie canadienne, notamment dans les domaines de la santé et du bien-être social, afin de réduire les inégalités entre les Canadiens.</span> <span class="connecteur">C'est pourquoi</span> <span class="r">Duplessis reproche à ce gouvernement d'intervenir dans les champs de compétences des provinces.</span> <span class="connecteur">Cela l'amène donc</span> <span class="v">à rejeter les subventions que le fédéral propose aux universités québécoises.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 33 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">33</span><span class="titre-theme">Relations syndicales</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment les conflits ouvriers provoquent des tensions sous le gouvernement Duplessis.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une revendication des travailleurs</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une réaction du gouvernement Duplessis</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sociale</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">33</span><span class="titre-theme">Relations syndicales</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Les travailleurs réclament de meilleures conditions de travail et organisent des grèves dans plusieurs secteurs industriels (grève de l'amiante de Thetford Mines et d'Asbestos).</span> Le gouvernement Duplessis intervient <span class="connecteur">alors</span> <span class="r">du côté du patronat et utilise la police provinciale pour limiter les manifestations ouvrières.</span> Cette situation <span class="connecteur">a pour effet</span> <span class="v">des tensions importantes entre les syndicats et le gouvernement québécois.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 34 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">34</span><span class="titre-theme">Contestation sociale</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment certains groupes contestent les valeurs traditionnelles du Québec dans les années 1940 et 1950.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une caractéristique de la société duplessiste</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une critique formulée par des artistes ou intellectuels</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur la société québécoise</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">34</span><span class="titre-theme">Contestation sociale</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">La société québécoise de l'époque duplessiste est très conservatrice et l'Église catholique exerce une grande influence sur la population. Les communautés religieuses assurent en effet la majorité des services d'éducation et de santé.</span> <span class="connecteur">C'est pourquoi</span> <span class="r">des artistes et intellectuels contestent ce conservatisme social. Dans le <em>Manifeste du Refus global</em>, des artistes protestent publiquement contre le conservatisme social du gouvernement Duplessis et de l'Église catholique. De jeunes intellectuels fondent aussi la revue <em>Cité libre</em> où ils font la promotion des libertés individuelles et de la démocratie et dénoncent la corruption.</span> Cette contestation <span class="connecteur">contribue progressivement</span> <span class="v">aux changements sociaux qui mèneront à la Révolution tranquille.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 35 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">35</span><span class="titre-theme">Révolution tranquille</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment la Révolution tranquille transforme les services publics au Québec.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une réforme du gouvernement Lesage</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une intervention de l'État québécois</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur la population</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">35</span><span class="titre-theme">Révolution tranquille</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le gouvernement Lesage (1960-1966) entreprend plusieurs réformes importantes pour moderniser le Québec pendant la Révolution tranquille, notamment dans l'éducation et la santé.</span> <span class="connecteur">Ainsi,</span> <span class="r">l'État québécois intervient davantage dans les services publics afin de moderniser la société québécoise. Il devient un État-providence.</span> Ces changements <span class="connecteur">ont pour effet</span> <span class="v">de rendre les services sociaux plus accessibles à l'ensemble de la population (soins de santé et éducation) et de réduire l'influence du clergé dans la société québécoise.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 36 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">36</span><span class="titre-theme">Hydroélectricité</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment la nationalisation de l'hydroélectricité transforme le rôle de l'État québécois.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une décision du gouvernement Lesage</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une intervention économique de l'État</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur le Québec</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">36</span><span class="titre-theme">Hydroélectricité</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le gouvernement Lesage décide de nationaliser l'hydroélectricité en regroupant plusieurs compagnies privées au sein d'Hydro-Québec.</span> <span class="connecteur">Ainsi,</span> <span class="r">cette décision permet à l'État québécois d'intervenir davantage dans l'économie. La nationalisation de l'électricité renforce aussi l'affirmation nationale et le contrôle des Québécois sur leurs ressources naturelles avec la création de sociétés d'État.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 37 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">37</span><span class="titre-theme">Féminisme</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment les mouvements féministes transforment la société québécoise dans les années 1960.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une revendication féministe</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une mesure adoptée par le gouvernement</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sociale</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">37</span><span class="titre-theme">Féminisme</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Les groupes féministes revendiquent davantage d'égalité entre les hommes et les femmes dans les années 1960.</span> <span class="connecteur">C'est pourquoi</span> <span class="r">la députée Marie-Claire Kirkland-Casgrain fait adopter la Loi sur la capacité juridique de la femme mariée qui permet aux femmes mariées d'effectuer des transactions financières, de signer des documents juridiques sans l'accord de leur mari.</span> Ces changements <span class="connecteur">ont pour effet</span> <span class="v">une amélioration de la place des femmes dans la société québécoise et augmentent leur autonomie.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 38 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">38</span><span class="titre-theme">Néonationalisme</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment le néonationalisme mène à la création du Parti québécois.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une revendication politique</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une union des mouvements souverainistes</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence politique</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">38</span><span class="titre-theme">Néonationalisme</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le néonationalisme exprime la volonté de plusieurs Québécois d'obtenir davantage d'autonomie politique ou l'indépendance du Québec.</span> <span class="connecteur">C'est ainsi que</span> <span class="r">plusieurs mouvements souverainistes (MSA et RIN) décident de s'unir pour former le Parti québécois en 1968.</span> Cette union <span class="connecteur">entraîne</span> <span class="v">la création d'un important parti souverainiste sur la scène politique québécoise.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 39 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">39</span><span class="titre-theme">Bilinguisme et biculturalisme</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment le caractère du néonationalisme québécois conduit à l'adoption d'une politique qui doit s'appliquer à l'ensemble du Canada.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Le caractère du néonationalisme québécois</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une réaction du premier ministre Pearson</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une politique qui doit s'appliquer à l'ensemble du Canada</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">39</span><span class="titre-theme">Bilinguisme et biculturalisme</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">L'identité nationale que les Québécois affirment est caractérisée par la langue et la culture française.</span> <span class="connecteur">C'est ainsi que</span> <span class="r">pour mieux comprendre la situation et se montrer ouvert aux revendications des Québécois, le premier ministre Pearson met sur pied la commission Laurendeau-Dunton. Cette commission fait état d'inégalités entre les francophones et les anglophones au Canada.</span> Pour corriger cette situation, <span class="connecteur">le gouvernement fédéral adopte</span> <span class="v">une politique de bilinguisme et de biculturalisme.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 40 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">40</span><span class="titre-theme">La question linguistique</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment la question linguistique devient un enjeu politique important au Québec dans les années 1960 et 1970.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">L'intégration linguistique des immigrants</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">L'inquiétude des francophones</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une intervention du gouvernement québécois</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">40</span><span class="titre-theme">La question linguistique</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">La majorité des immigrants qui s'établissent au Québec s'intègrent à la communauté anglophone puisqu'ils considèrent que l'apprentissage de l'anglais offre davantage de possibilités en Amérique du Nord.</span> Cette situation <span class="connecteur">entraîne</span> <span class="r">une inquiétude des francophones qui jugent nécessaire de prendre des mesures pour renforcer le caractère français du Québec et sensibiliser les immigrants à la particularité culturelle et linguistique de la province.</span> <span class="connecteur">C'est pourquoi</span> <span class="v">le gouvernement Bourassa intervient alors en adoptant la loi 22, puis le gouvernement du Parti québécois fait adopter la Charte de la langue française (loi 101), qui impose le français comme langue officielle et langue obligatoire dans plusieurs domaines de la société québécoise.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 41 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">41</span><span class="titre-theme">Crise d'Octobre</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment les actions du FLQ entraînent une réaction du gouvernement fédéral.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une action du FLQ</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une décision du gouvernement fédéral</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur la population québécoise</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">41</span><span class="titre-theme">Crise d'Octobre</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Au début des années 1960, le Front de libération du Québec commet des enlèvements afin de promouvoir l'indépendance du Québec. Ils kidnappent un diplomate britannique et le ministre Laporte.</span> <span class="connecteur">En réaction,</span> <span class="r">le gouvernement fédéral impose la Loi sur les mesures de guerre et fait intervenir l'armée canadienne au Québec.</span> Cette décision <span class="connecteur">entraîne</span> <span class="v">de nombreuses arrestations sans mandat et crée un climat de peur dans la population québécoise.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 42 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">42</span><span class="titre-theme">Front commun</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment les revendications syndicales provoquent des tensions avec le gouvernement québécois dans les années 1970.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une revendication des syndicats</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une action du Front commun</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une réaction du gouvernement</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">42</span><span class="titre-theme">Front commun</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Les grandes centrales syndicales réclament de meilleures conditions de travail et des augmentations salariales pour les travailleurs du secteur public.</span> <span class="connecteur">C'est pourquoi</span> <span class="r">les syndicats déclenchent une grève illimitée dans le cadre du Front commun.</span> <span class="connecteur">Alors</span> <span class="v">le gouvernement réagit en adoptant des lois spéciales afin de forcer le retour au travail, ce qui provoque d'importantes tensions sociales.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 43 -->
+<div class="carte-wrapper" data-chap="ch3">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">43</span><span class="titre-theme">Autochtones — Baie-James</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment le développement hydroélectrique de la Baie-James entraîne des revendications autochtones dans les années 1970.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Un projet du gouvernement du Québec</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une réaction des Cris</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une entente conclue avec les Autochtones</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">43</span><span class="titre-theme">Autochtones — Baie-James</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le gouvernement de Robert Bourassa lance un important projet hydroélectrique à la Baie-James afin de développer la production d'électricité du Québec.</span> <span class="connecteur">Cependant,</span> <span class="r">les Cris dénoncent ce projet puisqu'il menace leurs territoires et leur mode de vie traditionnel, alors qu'ils n'ont pas été consultés par le gouvernement. Les Cris intentent donc des recours devant les tribunaux et font arrêter les travaux.</span> Cela <span class="connecteur">pousse finalement</span> <span class="v">le gouvernement québécois à négocier avec eux et à signer la Convention de la Baie-James et du Nord québécois en 1975 (compensations financières notamment). Les travaux reprennent.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════════ -->
+<!-- CHAPITRE 4 -->
+<!-- ════════════════════════════════════════════════════════════ -->
+<div class="separateur-chapitre"><span class="chap-label">Chapitre 4 — Québec contemporain</span><span class="chap-ligne"></span></div>
+
+<!-- CARTE 44 -->
+<div class="carte-wrapper" data-chap="ch4">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">44</span><span class="titre-theme">Référendum de 1980</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment le projet de souveraineté-association provoque un débat au Québec en 1980.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une proposition du gouvernement Lévesque</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une réaction du gouvernement fédéral</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur la société québécoise</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">44</span><span class="titre-theme">Référendum de 1980</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le gouvernement de René Lévesque propose la souveraineté-association afin de donner davantage de pouvoirs au Québec. C'est le projet d'un Québec indépendant sur le plan politique mais lié au Canada sur le plan économique.</span> <span class="connecteur">Cependant,</span> <span class="r">le gouvernement fédéral de Pierre Elliott Trudeau s'oppose à ce projet et promet un renouvellement du fédéralisme canadien. Il promet aux Québécois que si le camp du NON l'emporte, il remettra en marche le processus constitutionnel de façon à mieux définir la place du Québec dans la fédération.</span> Cette campagne <span class="connecteur">a pour effet</span> <span class="v">de diviser la société québécoise et mène finalement à la victoire du camp du « Non » lors du référendum de 1980.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 45 -->
+<div class="carte-wrapper" data-chap="ch4">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">45</span><span class="titre-theme">Rapatriement constitutionnel</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment le rapatriement de la Constitution modifie les relations entre le Québec et le Canada.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une décision du gouvernement fédéral</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une réaction du gouvernement du Québec</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence politique</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">45</span><span class="titre-theme">Rapatriement constitutionnel</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Peu après le référendum sur la souveraineté-association du Québec, le gouvernement fédéral décide de rapatrier la Constitution canadienne afin de tenir son engagement de modifier la Constitution canadienne. Il y a des négociations difficiles et Trudeau négocie une entente des provinces sans l'accord du Québec.</span> <span class="connecteur">C'est ainsi qu'</span><span class="r">en 1982, le rapatriement de la Constitution se fait sans le consentement du Québec. La constitution ne précise pas le statut du Québec au sein du Canada.</span> Cette situation <span class="connecteur">entraîne</span> <span class="v">une détérioration des relations entre le Québec et le gouvernement fédéral et alimente la montée du nationalisme et du mouvement souverainiste québécois.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 46 -->
+<div class="carte-wrapper" data-chap="ch4">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">46</span><span class="titre-theme">Accord du lac Meech</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment l'échec de l'accord du lac Meech relance le débat sur la souveraineté du Québec.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une demande du gouvernement du Québec</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">L'échec d'une réforme constitutionnelle</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence politique au Québec</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">46</span><span class="titre-theme">Accord du lac Meech</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le gouvernement du Québec demande d'être reconnu comme une société distincte dans la Constitution canadienne.</span> <span class="connecteur">Cependant,</span> <span class="r">l'accord du lac Meech échoue puisqu'il n'est pas ratifié par toutes les provinces canadiennes.</span> Cet échec <span class="connecteur">a pour effet</span> <span class="v">une montée du mouvement souverainiste au Québec et relance le débat sur l'avenir politique de la province. Le Québec n'est toujours pas intégré à la Constitution canadienne.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 47 -->
+<div class="carte-wrapper" data-chap="ch4">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">47</span><span class="titre-theme">Référendum de 1995</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment les échecs constitutionnels provoquent la tenue du référendum de 1995.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Un échec constitutionnel</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une décision du gouvernement québécois</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur la société québécoise</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">47</span><span class="titre-theme">Référendum de 1995</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Les échecs des accords du lac Meech et de Charlottetown déçoivent plusieurs Québécois qui souhaitent une reconnaissance particulière du Québec dans la fédération canadienne.</span> <span class="connecteur">C'est pourquoi</span> <span class="r">le gouvernement de Jacques Parizeau décide d'organiser un deuxième référendum sur la souveraineté du Québec en 1995.</span> Cette campagne <span class="connecteur">entraîne</span> <span class="v">de profondes divisions dans la société québécoise entre les partisans du « Oui » et du « Non ».</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 48 -->
+<div class="carte-wrapper" data-chap="ch4">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">48</span><span class="titre-theme">Néolibéralisme</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment le néolibéralisme transforme le rôle de l'État depuis les années 1980.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une difficulté économique de l'État</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une mesure gouvernementale</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sociale</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">48</span><span class="titre-theme">Néolibéralisme</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">L'augmentation de la dette publique et des dépenses de l'État pousse les gouvernements à remettre en question l'État-providence dans les années 1980.</span> <span class="connecteur">C'est pourquoi</span> <span class="r">les gouvernements adoptent alors des mesures de compression budgétaire et certaines privatisations (néolibéralisme).</span> Ces décisions <span class="connecteur">réduisent ainsi</span> <span class="v">l'intervention de l'État dans plusieurs domaines et provoquent des critiques de certains groupes sociaux.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 49 -->
+<div class="carte-wrapper" data-chap="ch4">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">49</span><span class="titre-theme">Dévitalisation des régions</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment les difficultés économiques entraînent la dévitalisation des régions ressources au Québec.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une difficulté économique dans les régions</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une conséquence sur l'emploi</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur les régions du Québec</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">49</span><span class="titre-theme">Dévitalisation des régions</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Les régions ressources dépendent souvent d'une seule industrie ou entreprise importante. Lorsque certaines mines ou usines ferment, de nombreux travailleurs perdent leur emploi et quittent leur région.</span> Cette situation <span class="connecteur">pousse</span> <span class="r">plusieurs habitants à quitter leur région pour aller chercher du travail dans les grands centres urbains comme Montréal ou Québec.</span> Cet exode rural <span class="connecteur">entraîne alors</span> <span class="v">une diminution de la population dans plusieurs régions, ce qui réduit leur poids économique et politique au Québec et contribue à la dévitalisation des régions ressources.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 50 -->
+<div class="carte-wrapper" data-chap="ch4">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">50</span><span class="titre-theme">Vieillissement de la population</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment les changements démographiques modifient les interventions de l'État québécois.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une transformation démographique</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une conséquence sur les dépenses publiques</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une intervention du gouvernement</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">50</span><span class="titre-theme">Vieillissement de la population</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le Québec connaît un vieillissement de sa population en raison du faible taux de natalité et de l'augmentation de l'espérance de vie.</span> Cette transformation démographique <span class="connecteur">entraîne</span> <span class="r">l'augmentation des dépenses publiques, notamment dans le domaine de la santé.</span> Le gouvernement québécois <span class="connecteur">doit alors investir</span> <span class="v">davantage dans les services destinés aux personnes âgées.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 51 -->
+<div class="carte-wrapper" data-chap="ch4">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">51</span><span class="titre-theme">Immigration contemporaine</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment l'immigration devient un facteur important de croissance de la population québécoise.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une transformation démographique</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une intervention du gouvernement québécois</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur la population</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">51</span><span class="titre-theme">Immigration contemporaine</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Le ralentissement de l'accroissement naturel réduit la croissance de la population québécoise.</span> Pour répondre au manque de main-d'œuvre, <span class="connecteur">le gouvernement québécois encourage</span> <span class="r">davantage l'immigration et valorise les compétences des nouveaux arrivants.</span> Cette situation <span class="connecteur">fait de l'immigration</span> <span class="v">le principal facteur de croissance de la population du Québec.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 52 -->
+<div class="carte-wrapper" data-chap="ch4">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">52</span><span class="titre-theme">Environnement</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment les groupes environnementaux influencent les actions du gouvernement québécois.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une revendication environnementale</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Une intervention du gouvernement</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une conséquence sur la protection de l'environnement</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">52</span><span class="titre-theme">Environnement</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">Les groupes environnementaux dénoncent les conséquences de l'exploitation des ressources naturelles et sensibilisent la population aux changements climatiques.</span> <span class="connecteur">C'est ainsi que</span> <span class="r">sous la pression de ces mouvements, le gouvernement adopte des politiques et signe des ententes environnementales.</span> Ces interventions <span class="connecteur">visent à</span> <span class="v">mieux protéger l'environnement et à réduire les impacts des changements climatiques.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- CARTE 53 — NEUTRALITÉ DE L'ÉTAT -->
+<div class="carte-wrapper" data-chap="ch4">
+<div class="carte" onclick="this.classList.toggle('retournee')">
+  <div class="face recto">
+    <div class="bandeau"><span class="numero">53</span><span class="titre-theme">Neutralité de l'État</span><span class="face-label recto-label">Question</span></div>
+    <div class="corps-recto">
+      <div class="question-col">
+        <div class="question-texte">Explique comment l'immigration relance les débats sur la laïcité au Québec.</div>
+        <div class="question-consigne">Réponds à la question en précisant les éléments ci-dessous et en les liant entre eux.</div>
+      </div>
+      <div class="elements-col">
+        <div class="elements-titre">Éléments à lier</div>
+        <div class="element e1"><div class="element-puce"></div><div class="element-texte">Une transformation démographique</div></div>
+        <div class="element e2"><div class="element-puce"></div><div class="element-texte">Un débat dans la société québécoise</div></div>
+        <div class="element e3"><div class="element-puce"></div><div class="element-texte">Une intervention du gouvernement</div></div>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour voir la réponse</span><span class="pied-icone">↩</span></div>
+  </div>
+  <div class="face verso">
+    <div class="bandeau"><span class="numero">53</span><span class="titre-theme">Neutralité de l'État</span><span class="face-label verso-label">Réponse</span></div>
+    <div class="corps-verso">
+      <div class="reponse-texte">
+        <span class="b">L'augmentation de l'immigration rend la société québécoise plus diversifiée sur le plan culturel et religieux.</span> Cette diversité <span class="connecteur">provoque</span> <span class="r">des débats sur les accommodements raisonnables et sur la place de la religion dans les institutions publiques.</span> <span class="connecteur">Alors,</span> <span class="v">le gouvernement intervient en adoptant des mesures liées à la laïcité et à la neutralité de l'État.</span>
+      </div>
+    </div>
+    <div class="pied"><span class="pied-hint">Cliquez pour revenir à la question</span><span class="pied-icone">↩</span></div>
+  </div>
+</div>
+</div>
+
+<!-- FIN GRILLE -->
+</div>
+
+<script>
+  function filtrer(chap, btn) {
+    document.querySelectorAll('.filtre-btn').forEach(b => b.classList.remove('actif'));
+    btn.classList.add('actif');
+    const wrappers = document.querySelectorAll('.carte-wrapper');
+    let count = 0;
+    wrappers.forEach(w => {
+      if (chap === 'tout' || w.dataset.chap === chap) {
+        w.classList.remove('masquee');
+        count++;
+      } else {
+        w.classList.add('masquee');
+        w.querySelector('.carte').classList.remove('retournee');
+      }
+    });
+    document.getElementById('nb-visible').textContent = count;
+  }
+</script>
+</body>
+</html>
