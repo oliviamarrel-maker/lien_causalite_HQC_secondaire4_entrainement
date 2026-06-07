@@ -1,0 +1,2 @@
+# lien_causalite_HQC_secondaire4_entrainement
+Entraînement opérations intellectuelles liens de causalité
